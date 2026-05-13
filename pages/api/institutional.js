@@ -1,34 +1,42 @@
 export default async function handler(req, res) {
   try {
     const response = await fetch(
-      "https://openapi.twse.com.tw/v1/fund/T86"
+      "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL",
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0"
+        }
+      }
     );
+
+    if (!response.ok) {
+      throw new Error("TWSE stocks API failed");
+    }
 
     const data = await response.json();
 
-    const result = data.map((item) => {
-      const foreign = Number(item.Foreign_Investor_Net_Buy_Sell || item.外陸資買賣超股數 || 0) / 1000;
-      const trust = Number(item.Investment_Trust_Net_Buy_Sell || item.投信買賣超股數 || 0) / 1000;
-      const dealer = Number(item.Dealer_Net_Buy_Sell || item.自營商買賣超股數 || 0) / 1000;
+    const stocks = data.map((item) => ({
+      code: item.Code || item.證券代號 || "",
+      name: item.Name || item.證券名稱 || "",
+      pe: cleanNumber(item.PEratio || item.本益比),
+      pb: cleanNumber(item.PBratio || item.股價淨值比),
+      dividendYield: cleanNumber(item.DividendYield || item.殖利率),
+      roe: 0,
+      epsGrowth: 0,
+      revenueGrowth: 0,
+      kdSignal: "all",
+      maSignal: "all"
+    }));
 
-      return {
-        code: item.Code || item.證券代號 || "",
-        foreign: Math.round(foreign),
-        trust: Math.round(trust),
-        dealer: Math.round(dealer),
-        totalInstitution: Math.round(foreign + trust + dealer),
-
-        foreign5DayNet: Math.round(foreign),
-        trust5DayNet: Math.round(trust),
-        foreignBuyDays: foreign > 0 ? 1 : 0,
-        trustBuyDays: trust > 0 ? 1 : 0
-      };
-    });
-
-    res.status(200).json(result);
+    res.status(200).json(stocks);
   } catch (err) {
     res.status(500).json({
       error: err.message
     });
   }
+}
+
+function cleanNumber(value) {
+  if (!value || value === "-" || value === "N/A") return 0;
+  return Number(String(value).replace(/,/g, "")) || 0;
 }
