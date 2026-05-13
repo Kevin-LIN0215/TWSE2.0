@@ -1,6 +1,12 @@
 import * as cheerio from "cheerio";
 import iconv from "iconv-lite";
 
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+};
+
 const STOCK_IDS = [
   "2330", "2317", "2454", "2308", "2382",
   "2412", "2881", "2882", "2886", "2891",
